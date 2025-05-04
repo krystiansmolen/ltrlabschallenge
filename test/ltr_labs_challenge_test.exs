@@ -28,6 +28,15 @@ defmodule LtrLabsChallengeTest do
     assert Decimal.equal?(result.total, Decimal.new("0"))
   end
 
+  test "order with items as nil" do
+    order = %Order{items: nil}
+    result = LtrLabsChallenge.calculate_order(order, 20)
+
+    assert Decimal.equal?(result.net_total, Decimal.new("0"))
+    assert Decimal.equal?(result.tax, Decimal.new("0"))
+    assert Decimal.equal?(result.total, Decimal.new("0"))
+  end
+
   test "order with item having quantity zero" do
     items = [%OrderItem{net_price: Decimal.new("100.00"), quantity: 0}]
     order = %Order{items: items}
@@ -85,5 +94,17 @@ defmodule LtrLabsChallengeTest do
     assert Decimal.equal?(result.net_total, Decimal.new("20.00"))
     assert Decimal.equal?(result.tax, Decimal.new("1.50"))
     assert Decimal.equal?(result.total, Decimal.new("21.50"))
+  end
+
+  test "invalid tax rate" do
+    items = [
+      %OrderItem{net_price: Decimal.new("20.00"), quantity: 3}
+    ]
+
+    order = %Order{items: items}
+
+    assert_raise Decimal.Error, fn ->
+      LtrLabsChallenge.calculate_order(order, "foo")
+    end
   end
 end
