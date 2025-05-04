@@ -70,41 +70,63 @@ defmodule LtrLabsChallengeTest do
     assert Decimal.equal?(result.total, Decimal.new("15625.00"))
   end
 
-  test "tax rate of 0%" do
-    items = [
-      %OrderItem{net_price: Decimal.new("20.00"), quantity: 3}
-    ]
+  describe "tax_rate_percent validation" do
+    setup do
+      items = [%OrderItem{net_price: Decimal.new("15.00"), quantity: 2}]
 
-    order = %Order{items: items}
-    result = LtrLabsChallenge.calculate_order(order, 0)
+      %{order: %Order{items: items}}
+    end
 
-    assert Decimal.equal?(result.net_total, Decimal.new("60.00"))
-    assert Decimal.equal?(result.tax, Decimal.new("0"))
-    assert Decimal.equal?(result.total, Decimal.new("60.00"))
-  end
+    test "raises if tax_rate_percent is a non-numeric string", %{order: order} do
+      assert_raise ArgumentError, "Invalid tax rate", fn ->
+        LtrLabsChallenge.calculate_order(order, "foo")
+      end
+    end
 
-  test "tax rate with decimal" do
-    items = [
-      %OrderItem{net_price: Decimal.new("10.00"), quantity: 2}
-    ]
+    test "raises if tax_rate_percent is negative string", %{order: order} do
+      assert_raise ArgumentError, "Tax rate cannot be negative", fn ->
+        LtrLabsChallenge.calculate_order(order, "-7.5")
+      end
+    end
 
-    order = %Order{items: items}
-    result = LtrLabsChallenge.calculate_order(order, 7.5)
+    test "raises if tax_rate_percent is negative number", %{order: order} do
+      assert_raise ArgumentError, "Tax rate cannot be negative", fn ->
+        LtrLabsChallenge.calculate_order(order, -10)
+      end
+    end
 
-    assert Decimal.equal?(result.net_total, Decimal.new("20.00"))
-    assert Decimal.equal?(result.tax, Decimal.new("1.50"))
-    assert Decimal.equal?(result.total, Decimal.new("21.50"))
-  end
+    test "works correctly with valid integer tax_rate_percent", %{order: order} do
+      result = LtrLabsChallenge.calculate_order(order, 10)
 
-  test "invalid tax rate" do
-    items = [
-      %OrderItem{net_price: Decimal.new("20.00"), quantity: 3}
-    ]
+      assert Decimal.equal?(result.tax, Decimal.new("3.00"))
+    end
 
-    order = %Order{items: items}
+    test "works correctly with valid float tax_rate_percent", %{order: order} do
+      result = LtrLabsChallenge.calculate_order(order, 7.5)
 
-    assert_raise Decimal.Error, fn ->
-      LtrLabsChallenge.calculate_order(order, "foo")
+      assert Decimal.equal?(result.tax, Decimal.new("2.25"))
+    end
+
+    test "works correctly with tax_rate_percent passed as string", %{order: order} do
+      result = LtrLabsChallenge.calculate_order(order, "5.0")
+
+      assert Decimal.equal?(result.tax, Decimal.new("1.50"))
+    end
+
+    test "works correctly with tax_rate_percent passed as 0%", %{order: order} do
+      result = LtrLabsChallenge.calculate_order(order, 0)
+
+      assert Decimal.equal?(result.net_total, Decimal.new("30.00"))
+      assert Decimal.equal?(result.tax, Decimal.new("0"))
+      assert Decimal.equal?(result.total, Decimal.new("30.00"))
+    end
+
+    test "works correctly with tax_rate_percent passed as float", %{order: order} do
+      result = LtrLabsChallenge.calculate_order(order, 7.5)
+
+      assert Decimal.equal?(result.net_total, Decimal.new("30.00"))
+      assert Decimal.equal?(result.tax, Decimal.new("2.25"))
+      assert Decimal.equal?(result.total, Decimal.new("32.25"))
     end
   end
 end
